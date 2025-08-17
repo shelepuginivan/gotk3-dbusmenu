@@ -19,6 +19,26 @@ type DBusMenu struct {
 	gtk.Menu
 }
 
+func wrapDBusMenu(obj *glib.Object) *DBusMenu {
+	if obj == nil {
+		return nil
+	}
+
+	return &DBusMenu{
+		Menu: gtk.Menu{
+			MenuShell: gtk.MenuShell{
+				Container: gtk.Container{
+					Widget: gtk.Widget{
+						InitiallyUnowned: glib.InitiallyUnowned{
+							Object: obj,
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
 // New is a wrapper around dbusmenu_gtkmenu_new().
 func New(dbusName, dbusObject string) (*DBusMenu, error) {
 	cDBusName := C.CString(dbusName)
@@ -31,31 +51,5 @@ func New(dbusName, dbusObject string) (*DBusMenu, error) {
 		return nil, errors.New("dbusmenu_gtkmenu_new returned nil pointer")
 	}
 
-	cGObject := glib.ToGObject(unsafe.Pointer(ptr))
-
-	gObject := &glib.Object{
-		GObject: cGObject,
-	}
-
-	initiallyUnowned := glib.InitiallyUnowned{
-		Object: gObject,
-	}
-
-	widget := gtk.Widget{
-		InitiallyUnowned: initiallyUnowned,
-	}
-
-	container := gtk.Container{
-		Widget: widget,
-	}
-
-	menushell := gtk.MenuShell{
-		Container: container,
-	}
-
-	menu := gtk.Menu{
-		MenuShell: menushell,
-	}
-
-	return &DBusMenu{menu}, nil
+	return wrapDBusMenu(glib.Take(unsafe.Pointer(ptr))), nil
 }
